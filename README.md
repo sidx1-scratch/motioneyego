@@ -12,6 +12,7 @@ It connects to your **MotionEye** MJPEG video feeds and can link with **Frigate 
 
 ### 🌟 Key Highlights
 - **Engineered for Oculus Go**: Designed for the Oculus Go Browser (3DoF head tracking pointer) with high contrast, large targets, and hands-free dwell gaze navigation.
+- **Smart URL Conversion**: Paste direct MotionEye stream URLs or copy browser URLs directly from Frigate Web UI (e.g., `http://192.168.0.87:5000/#camera_1`). The server automatically converts them to working MJPEG endpoints (`/api/camera_1`).
 - **Zero Dependencies**: Pure Node.js standard library backend and native vanilla HTML, CSS, and JS frontend. No `node_modules` required!
 - **Built-in Custom `.env` Parser**: Handcrafted `.env` parser written from scratch with quote stripping, multiline support, and fallback mechanisms.
 - **MJPEG Reverse Proxy**: Avoids CORS and mixed-content issues on modern browsers and VR web engines by proxying camera streams securely.

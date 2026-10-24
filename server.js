@@ -115,6 +115,38 @@ const FRIGATE_URL = process.env.FRIGATE_URL || 'http://localhost:5000';
 const FRIGATE_ENABLED = (process.env.FRIGATE_ENABLED || 'false').toLowerCase() === 'true';
 
 /**
+ * Normalize and convert stream URLs intelligently.
+ * Handles:
+ * - Frigate Web UI URLs: http://host:port/#camera_name -> http://host:port/api/camera_name
+ * - Frigate Web UI cameras route: http://host:port/cameras/camera_name -> http://host:port/api/camera_name
+ * - MotionEye web URLs if passed with /picture/ or /#
+ * - General trim and cleanup
+ */
+function normalizeStreamUrl(rawUrl) {
+  if (!rawUrl) return rawUrl;
+  let cleanUrl = rawUrl.trim();
+
+  // Pattern 1: Frigate hash route, e.g., http://192.168.0.87:5000/#camera_1 or /#camera_1/
+  // Turns into http://192.168.0.87:5000/api/camera_1
+  const frigateHashMatch = cleanUrl.match(/^([a-zA-Z][a-zA-Z0-9+\-.]*:\/\/[^\/]+(?:\/.*?)?)\/#([a-zA-Z0-9_\-]+)\/?$/);
+  if (frigateHashMatch) {
+    const base = frigateHashMatch[1].replace(/\/+$/, '');
+    const cameraName = frigateHashMatch[2];
+    return `${base}/api/${cameraName}`;
+  }
+
+  // Pattern 2: Frigate cameras subpath without /api/, e.g. http://host:port/cameras/camera_1
+  const frigateSubpathMatch = cleanUrl.match(/^([a-zA-Z][a-zA-Z0-9+\-.]*:\/\/[^\/]+)\/cameras\/([a-zA-Z0-9_\-]+)\/?$/);
+  if (frigateSubpathMatch) {
+    const base = frigateSubpathMatch[1];
+    const cameraName = frigateSubpathMatch[2];
+    return `${base}/api/${cameraName}`;
+  }
+
+  return cleanUrl;
+}
+
+/**
  * Parse the STREAMS environment variable into an array of {name, url} objects.
  * Format: NAME|URL,NAME|URL
  */
@@ -130,11 +162,15 @@ function parseStreams(streamsStr) {
     const pipeIndex = trimmed.indexOf('|');
     if (pipeIndex === -1) {
       // No name provided, generate one
-      acc.push({ name: `Camera${acc.length + 1}`, url: trimmed });
+      const urlConverted = normalizeStreamUrl(trimmed);
+      acc.push({ name: `Camera${acc.length + 1}`, url: urlConverted });
     } else {
+      const name = trimmed.substring(0, pipeIndex).trim();
+      const rawUrl = trimmed.substring(pipeIndex + 1).trim();
+      const urlConverted = normalizeStreamUrl(rawUrl);
       acc.push({
-        name: trimmed.substring(0, pipeIndex).trim(),
-        url: trimmed.substring(pipeIndex + 1).trim(),
+        name: name,
+        url: urlConverted,
       });
     }
     return acc;
