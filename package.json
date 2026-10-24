@@ -1,0 +1,19 @@
+{
+  "name": "motioneyego",
+  "version": "1.0.0",
+  "description": "MotionEye camera viewer optimized for Oculus Go with gaze control and Frigate NVR integration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "motioneye",
+    "oculus-go",
+    "gaze-control",
+    "frigate-nvr",
+    "mjpeg",
+    "vr-surveillance"
+  ],
+  "author": "sidx1",
+  "license": "MIT"
+}

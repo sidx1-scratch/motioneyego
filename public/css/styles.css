@@ -1,0 +1,583 @@
+/* ==========================================================================
+   MotionEyeGo Stylesheet
+   Optimized for Oculus Go Browser & Standalone Headset Display
+   ========================================================================== */
+
+:root {
+  --bg-color: #0b0c10;
+  --surface-color: #14161f;
+  --surface-alt: #1a1d29;
+  --border-color: #262a3d;
+  --accent-cyan: #00e5ff;
+  --accent-glow: rgba(0, 229, 255, 0.4);
+  --accent-green: #00e676;
+  --accent-red: #ff3d00;
+  --text-main: #f0f4f8;
+  --text-muted: #8892b0;
+  --navbar-height: 56px;
+  --statusbar-height: 34px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+}
+
+/* ==========================================================================
+   Loading Screen
+   ========================================================================== */
+#loading-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #171b29 0%, #0b0c10 100%);
+  z-index: 10000;
+  transition: opacity 0.4s ease, visibility 0.4s;
+}
+
+#loading-screen.fade-out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.loader-spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(0, 229, 255, 0.15);
+  border-top-color: var(--accent-cyan);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loader-container h1 {
+  font-size: 28px;
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 0 0 12px var(--accent-glow);
+}
+
+.loader-container p {
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+/* ==========================================================================
+   Layout Containers
+   ========================================================================== */
+#app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Top Navbar */
+#navbar {
+  height: var(--navbar-height);
+  background: rgba(17, 19, 28, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  z-index: 200;
+}
+
+.nav-left .logo {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  text-shadow: 0 0 10px var(--accent-glow);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-center #clock {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-main);
+  background: var(--surface-color);
+  padding: 4px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  letter-spacing: 1px;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-btn {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  min-height: 40px;
+  transition: all 0.2s ease;
+}
+
+.nav-btn .icon {
+  font-size: 16px;
+}
+
+/* Camera Grid & Views */
+#camera-grid {
+  flex: 1;
+  width: 100%;
+  height: calc(100vh - var(--navbar-height) - var(--statusbar-height));
+  overflow-y: auto;
+  padding: 12px;
+  background-color: var(--bg-color);
+}
+
+/* Grid Mode */
+#camera-grid.grid-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+/* Fullscreen/Solo Mode */
+#camera-grid.fullscreen-view {
+  display: flex;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+#camera-grid.fullscreen-view .camera-tile {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  border: none;
+}
+
+/* Cycle Mode */
+#camera-grid.cycle-view {
+  display: flex;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+#camera-grid.cycle-view .camera-tile {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  border: none;
+}
+
+/* Camera Tile */
+.camera-tile {
+  position: relative;
+  background: var(--surface-color);
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.camera-tile img.camera-stream {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.camera-tile .camera-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.85) 100%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.camera-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.camera-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.camera-status.online {
+  background-color: var(--accent-green);
+  box-shadow: 0 0 6px var(--accent-green);
+}
+
+.camera-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-color);
+  color: var(--accent-red);
+  gap: 8px;
+  font-size: 14px;
+}
+
+.camera-error .error-icon {
+  font-size: 28px;
+}
+
+.camera-tile.selected {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 14px var(--accent-glow);
+}
+
+/* ==========================================================================
+   Gaze Control Reticle & Highlights
+   ========================================================================== */
+#gaze-cursor {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  pointer-events: none;
+  z-index: 99999;
+  transition: opacity 0.2s ease;
+}
+
+#gaze-cursor.gaze-cursor-hidden {
+  opacity: 0;
+}
+
+.gaze-ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 4;
+}
+
+.gaze-ring-progress {
+  fill: none;
+  stroke: var(--accent-cyan);
+  stroke-width: 5;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: stroke-dashoffset 0.05s linear;
+}
+
+.gaze-dot {
+  fill: var(--accent-cyan);
+  filter: drop-shadow(0 0 3px var(--accent-cyan));
+}
+
+/* Gaze-interactive targets feedback */
+.gaze-target {
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.gaze-target.gaze-hover {
+  border-color: var(--accent-cyan) !important;
+  box-shadow: 0 0 16px var(--accent-glow) !important;
+  transform: scale(1.03);
+}
+
+.gaze-target.gaze-activated {
+  background-color: var(--accent-cyan) !important;
+  color: #000 !important;
+  transform: scale(0.96) !important;
+}
+
+/* ==========================================================================
+   Frigate Detection Sidebar
+   ========================================================================== */
+#detection-panel {
+  position: fixed;
+  top: var(--navbar-height);
+  right: 0;
+  width: 340px;
+  height: calc(100vh - var(--navbar-height) - var(--statusbar-height));
+  background: rgba(18, 20, 30, 0.96);
+  backdrop-filter: blur(12px);
+  border-left: 1px solid var(--border-color);
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#detection-panel.panel-hidden {
+  transform: translateX(100%);
+}
+
+#detection-panel.panel-visible {
+  transform: translateX(0);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.panel-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+}
+
+#detection-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detection-item {
+  display: flex;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  gap: 10px;
+  padding: 6px;
+}
+
+.detection-thumb {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: #000;
+}
+
+.detection-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.detection-label {
+  font-weight: 600;
+  color: var(--accent-cyan);
+  text-transform: capitalize;
+}
+
+.detection-score {
+  font-size: 11px;
+  color: var(--accent-green);
+}
+
+.detection-camera, .detection-time {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.no-events {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 40px 0;
+}
+
+/* ==========================================================================
+   Settings Modal
+   ========================================================================== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+}
+
+.modal-content {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 440px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.modal-content h2 {
+  font-size: 18px;
+  color: #fff;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+}
+
+.setting-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.setting-group label {
+  font-size: 14px;
+  color: var(--text-main);
+}
+
+.toggle-btn {
+  background: var(--accent-green);
+  color: #000;
+  border: none;
+  font-weight: 700;
+  padding: 6px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  min-width: 70px;
+}
+
+.toggle-btn.off {
+  background: #444;
+  color: #bbb;
+}
+
+.dwell-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dwell-controls .nav-btn {
+  min-height: 32px;
+  padding: 4px 10px;
+}
+
+.close-modal-btn {
+  background: var(--surface-alt);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  width: 100%;
+}
+
+/* ==========================================================================
+   Footer Status Bar
+   ========================================================================== */
+#status-bar {
+  height: var(--statusbar-height);
+  background: rgba(14, 16, 24, 0.95);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+  z-index: 100;
+}
+
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-indicator {
+  color: var(--accent-green);
+  font-size: 10px;
+}
+
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vr-badge {
+  background: var(--surface-alt);
+  border: 1px solid var(--border-color);
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: var(--accent-cyan);
+  font-weight: 600;
+  font-size: 10px;
+}

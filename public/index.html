@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MotionEyeGo</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loader-container">
+      <div class="loader-spinner"></div>
+      <h1>MotionEyeGo</h1>
+      <p id="loading-msg">Loading cameras...</p>
+    </div>
+  </div>
+
+  <!-- Main App Container -->
+  <div id="app" class="hidden">
+    <!-- Top Navigation Bar -->
+    <nav id="navbar">
+      <div class="nav-left">
+        <h1 class="logo">👁️ MotionEyeGo</h1>
+      </div>
+      <div class="nav-center">
+        <span id="clock">--:--</span>
+      </div>
+      <div class="nav-right">
+        <!-- View mode buttons - gaze-interactive -->
+        <button class="nav-btn gaze-target" data-gaze-action="grid" data-gaze-dwell="1000" title="Grid View">
+          <span class="icon">▦</span>
+          <span class="btn-text">Grid</span>
+        </button>
+        <button class="nav-btn gaze-target" data-gaze-action="fullscreen" data-gaze-dwell="1000" title="Fullscreen">
+          <span class="icon">⛶</span>
+          <span class="btn-text">Solo</span>
+        </button>
+        <button class="nav-btn gaze-target" data-gaze-action="cycle" data-gaze-dwell="1200" title="Cycle View">
+          <span class="icon">⟳</span>
+          <span class="btn-text">Cycle</span>
+        </button>
+        <button class="nav-btn gaze-target" data-gaze-action="toggle-detections" data-gaze-dwell="1000" title="Detections" id="btn-detections">
+          <span class="icon">🔍</span>
+          <span class="btn-text">Alerts</span>
+        </button>
+        <button class="nav-btn gaze-target" data-gaze-action="settings" data-gaze-dwell="1200" title="Settings">
+          <span class="icon">⚙</span>
+          <span class="btn-text">Setup</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Camera Grid Container -->
+    <main id="camera-grid" class="grid-view">
+      <!-- Camera tiles injected dynamically by JS -->
+    </main>
+
+    <!-- Frigate Detection Events Panel (slide-in sidebar) -->
+    <aside id="detection-panel" class="panel-hidden">
+      <div class="panel-header">
+        <h2>🔍 Detections (Frigate)</h2>
+        <button class="close-btn gaze-target" data-gaze-action="close-detections" data-gaze-dwell="800">✕</button>
+      </div>
+      <div id="detection-list">
+        <!-- Detection events populated by JS -->
+      </div>
+    </aside>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2>⚙ Settings & Preferences</h2>
+        
+        <div class="setting-group">
+          <label>Gaze Control</label>
+          <button class="toggle-btn gaze-target" data-gaze-action="toggle-gaze" data-gaze-dwell="1000" id="gaze-toggle">ON</button>
+        </div>
+
+        <div class="setting-group">
+          <label>Gaze Dwell Time</label>
+          <div class="dwell-controls">
+            <button class="nav-btn gaze-target" data-gaze-action="dwell-decrease" data-gaze-dwell="700">−</button>
+            <span id="dwell-display">1.0s</span>
+            <button class="nav-btn gaze-target" data-gaze-action="dwell-increase" data-gaze-dwell="700">+</button>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <label>Auto-Cycle Interval</label>
+          <div class="dwell-controls">
+            <button class="nav-btn gaze-target" data-gaze-action="cycle-decrease" data-gaze-dwell="700">−</button>
+            <span id="cycle-display">5s</span>
+            <button class="nav-btn gaze-target" data-gaze-action="cycle-increase" data-gaze-dwell="700">+</button>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <label>Show Gaze Reticle</label>
+          <button class="toggle-btn gaze-target" data-gaze-action="toggle-cursor" data-gaze-dwell="1000" id="cursor-toggle">ON</button>
+        </div>
+
+        <div class="setting-actions">
+          <button class="close-modal-btn gaze-target" data-gaze-action="close-settings" data-gaze-dwell="1000">Close Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gaze Reticle Cursor (VR Head-Tracking Gaze Indicator) -->
+    <div id="gaze-cursor">
+      <svg viewBox="0 0 100 100" width="48" height="48">
+        <circle cx="50" cy="50" r="42" class="gaze-ring-bg"/>
+        <circle cx="50" cy="50" r="42" class="gaze-ring-progress"/>
+        <circle cx="50" cy="50" r="6" class="gaze-dot"/>
+      </svg>
+    </div>
+
+    <!-- Status Bar -->
+    <footer id="status-bar">
+      <div class="status-left">
+        <span class="status-indicator">●</span>
+        <span id="status-text">Ready</span>
+      </div>
+      <div class="status-right">
+        <span id="camera-count">0 cameras</span>
+        <span class="vr-badge">Oculus Go Ready</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="js/gaze.js"></script>
+  <script src="js/frigate.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
