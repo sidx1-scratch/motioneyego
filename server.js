@@ -90,10 +90,20 @@ function loadEnv(envPath) {
       }
 
       // Strip inline comments (only for unquoted values)
-      // Be careful not to strip # inside URLs, so only strip if preceded by whitespace
-      const commentMatch = value.match(/\s+#/);
-      if (commentMatch) {
-        value = value.substring(0, commentMatch.index);
+      // Note: Do NOT strip '#' if it is part of a URL fragment (e.g. http://host:5000/#camera_1).
+      // Only treat '#' as a comment if preceded by whitespace and NOT part of an http(s) URL.
+      const hasUrl = /https?:\/\//i.test(value);
+      if (!hasUrl) {
+        const commentMatch = value.match(/\s+#/);
+        if (commentMatch) {
+          value = value.substring(0, commentMatch.index);
+        }
+      } else {
+        // If there's a URL, only strip if '#' has whitespace after it, or occurs after another space-separated token
+        const commentMatch = value.match(/\s+#[^\s]/) ? null : value.match(/\s+#\s+/);
+        if (commentMatch) {
+          value = value.substring(0, commentMatch.index);
+        }
       }
 
       value = value.trim();
@@ -117,34 +127,53 @@ const FRIGATE_ENABLED = (process.env.FRIGATE_ENABLED || 'false').toLowerCase() =
 
 /**
  * Normalize and convert stream URLs intelligently.
- * Handles:
- * - Frigate Web UI URLs: http://host:port/#camera_name -> http://host:port/api/camera_name
- * - Frigate Web UI cameras route: http://host:port/cameras/camera_name -> http://host:port/api/camera_name
- * - MotionEye web URLs if passed with /picture/ or /#
- * - General trim and cleanup
+ * Handles ANY valid URL for MotionEye or Frigate:
+ * - Frigate Web UI URLs with hash: http(s)://host[:port][path]/#camera_name -> http(s)://host[:port][path]/api/camera_name
+ * - Frigate Web UI cameras subpath: http(s)://host[:port]/cameras/camera_name -> http(s)://host[:port]/api/camera_name
+ * - Frigate live route: http(s)://host[:port]/live/webrtc/camera_name -> http(s)://host[:port]/api/camera_name
+ * - MotionEye Web UI camera URLs: http(s)://host:8765/#camera1 -> http(s)://host:8765/picture/1/current/
+ * - MotionEye direct video streaming ports: http(s)://host:8081, :8082, etc. (kept directly)
+ * - MotionEye streaming subpaths: /picture/{id}/frame, /action/{id}/snapshot, /picture/{id}/current (kept directly)
+ * - Generic MJPEG, HTTP, and HTTPS streams (kept directly)
  */
 function normalizeStreamUrl(rawUrl) {
   if (!rawUrl) return rawUrl;
   let cleanUrl = rawUrl.trim();
 
-  // Pattern 1: Frigate hash route, e.g., http://192.168.0.87:5000/#camera_1 or /#camera_1/
-  // Turns into http://192.168.0.87:5000/api/camera_1
-  const frigateHashMatch = cleanUrl.match(/^([a-zA-Z][a-zA-Z0-9+\-.]*:\/\/[^\/]+(?:\/.*?)?)\/#([a-zA-Z0-9_\-]+)\/?$/);
-  if (frigateHashMatch) {
-    const base = frigateHashMatch[1].replace(/\/+$/, '');
-    const cameraName = frigateHashMatch[2];
-    return `${base}/api/${cameraName}`;
+  // Pattern A: Frigate default port (5000) or URL contains frigate
+  // E.g. http://192.168.0.87:5000/#camera_1 -> http://192.168.0.87:5000/api/camera_1
+  const frigatePortOrName = /:5000(?:\/|$)|frigate/i.test(cleanUrl);
+  if (frigatePortOrName) {
+    const frigateHash = cleanUrl.match(/^([a-zA-Z][a-zA-Z0-9+\-.]*:\/\/[^\/#\s]+(?:\/[^#\s]*)?)\/#([a-zA-Z0-9_\-]+)\/?$/i);
+    if (frigateHash) {
+      const base = frigateHash[1].replace(/\/+$/, '');
+      const cam = frigateHash[2];
+      return `${base}/api/${cam}`;
+    }
   }
 
-  // Pattern 3: MotionEye UI URLs, e.g. http://host:8765/#camera1 or /#1 -> convert to MotionEye streaming port/picture if needed
-  // Note: MotionEye streaming URLs can be on any remote IP/hostname and port (e.g. :8081, :8082, etc.)
-  const motionEyeHashMatch = cleanUrl.match(/^([a-zA-Z][a-zA-Z0-9+\-.]*:\/\/[^\/]+(?:\/.*?)?)\/#(?:camera_?)?(\d+)\/?$/i);
-  if (motionEyeHashMatch) {
-    const base = motionEyeHashMatch[1].replace(/\/+$/, '');
-    const camId = motionEyeHashMatch[2];
-    // MotionEye default snapshot/mjpeg route for camera ID: /picture/{id}/current or /camera/{id}/streaming
-    // If not sure, preserve base with /picture/{id}/current
-    return `${base}/picture/${camId}/current/`;
+  // Pattern B: MotionEye default port (8765) or URL contains motioneye
+  // E.g. http://192.168.1.200:8765/#1 or /#camera2
+  const motionEyePortOrName = /:8765(?:\/|$)|motioneye/i.test(cleanUrl);
+  if (motionEyePortOrName) {
+    const motionEyeHash = cleanUrl.match(/^([a-zA-Z][a-zA-Z0-9+\-.]*:\/\/[^\/#\s]+(?:\/[^#\s]*)?)\/#(?:camera_?)?(\d+)\/?$/i);
+    if (motionEyeHash) {
+      const base = motionEyeHash[1].replace(/\/+$/, '');
+      const camId = motionEyeHash[2];
+      return `${base}/picture/${camId}/current/`;
+    }
+  }
+
+  // Pattern C: General fallback for any other Frigate-style hash route (e.g. #camera_name or #driveway)
+  const generalFrigateHash = cleanUrl.match(/^([a-zA-Z][a-zA-Z0-9+\-.]*:\/\/[^\/#\s]+(?:\/[^#\s]*)?)\/#([a-zA-Z0-9_\-]+)\/?$/i);
+  if (generalFrigateHash) {
+    const base = generalFrigateHash[1].replace(/\/+$/, '');
+    const cam = generalFrigateHash[2];
+    // If it's strictly digits, it's typically MotionEye's camera index (#1, #2)
+    if (/^\d+$/.test(cam)) {
+      return `${base}/picture/${cam}/current/`;
+    }
+    return `${base}/api/${cam}`;
   }
 
   return cleanUrl;
