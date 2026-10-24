@@ -5,6 +5,7 @@
 // =============================================================================
 
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
@@ -135,12 +136,15 @@ function normalizeStreamUrl(rawUrl) {
     return `${base}/api/${cameraName}`;
   }
 
-  // Pattern 2: Frigate cameras subpath without /api/, e.g. http://host:port/cameras/camera_1
-  const frigateSubpathMatch = cleanUrl.match(/^([a-zA-Z][a-zA-Z0-9+\-.]*:\/\/[^\/]+)\/cameras\/([a-zA-Z0-9_\-]+)\/?$/);
-  if (frigateSubpathMatch) {
-    const base = frigateSubpathMatch[1];
-    const cameraName = frigateSubpathMatch[2];
-    return `${base}/api/${cameraName}`;
+  // Pattern 3: MotionEye UI URLs, e.g. http://host:8765/#camera1 or /#1 -> convert to MotionEye streaming port/picture if needed
+  // Note: MotionEye streaming URLs can be on any remote IP/hostname and port (e.g. :8081, :8082, etc.)
+  const motionEyeHashMatch = cleanUrl.match(/^([a-zA-Z][a-zA-Z0-9+\-.]*:\/\/[^\/]+(?:\/.*?)?)\/#(?:camera_?)?(\d+)\/?$/i);
+  if (motionEyeHashMatch) {
+    const base = motionEyeHashMatch[1].replace(/\/+$/, '');
+    const camId = motionEyeHashMatch[2];
+    // MotionEye default snapshot/mjpeg route for camera ID: /picture/{id}/current or /camera/{id}/streaming
+    // If not sure, preserve base with /picture/{id}/current
+    return `${base}/picture/${camId}/current/`;
   }
 
   return cleanUrl;
@@ -322,9 +326,19 @@ function handleProxyStream(req, res, streamIndex) {
   const stream = STREAMS[index];
   const streamUrl = stream.url;
 
-  console.log(`[proxy] Connecting to MJPEG stream: ${stream.name} (${streamUrl})`);
+  console.log(`[proxy] Connecting to stream: ${stream.name} (${streamUrl})`);
 
-  const proxyReq = http.get(streamUrl, (proxyRes) => {
+  let clientLib = http;
+  try {
+    const parsed = new URL(streamUrl);
+    if (parsed.protocol === 'https:') {
+      clientLib = https;
+    }
+  } catch (e) {
+    if (streamUrl.startsWith('https:')) clientLib = https;
+  }
+
+  const proxyReq = clientLib.get(streamUrl, (proxyRes) => {
     // Copy the content-type header (typically multipart/x-mixed-replace)
     const contentType = proxyRes.headers['content-type'] || 'multipart/x-mixed-replace; boundary=myboundary';
 
@@ -381,6 +395,16 @@ function handleFrigateProxy(req, res, frigatePath) {
 
   console.log(`[frigate] Proxying request to: ${targetUrl}`);
 
+  let clientLib = http;
+  try {
+    const parsed = new URL(targetUrl);
+    if (parsed.protocol === 'https:') {
+      clientLib = https;
+    }
+  } catch (e) {
+    if (targetUrl.startsWith('https:')) clientLib = https;
+  }
+
   const parsedTarget = url.parse(targetUrl);
 
   const options = {
@@ -393,7 +417,7 @@ function handleFrigateProxy(req, res, frigatePath) {
     },
   };
 
-  const proxyReq = http.request(options, (proxyRes) => {
+  const proxyReq = clientLib.request(options, (proxyRes) => {
     // Forward the status code and relevant headers
     const headers = {
       'Content-Type': proxyRes.headers['content-type'] || 'application/json',
